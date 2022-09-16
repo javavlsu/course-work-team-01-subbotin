@@ -29,4 +29,5 @@ ___
 ### Полезные ссылки
 
 Отслеживание разработки - morecommunity.kaiten.ru
+
 Макет - www.figma.com/file/9XDoPAX2f2cVtHKJgKFqw4/More-Community
