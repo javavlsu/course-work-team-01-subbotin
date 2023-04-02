@@ -1,0 +1,23 @@
+server:
+  port: 5000
+  servlet:
+    context-path: /api
+
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate.globally_quoted_identifiers: true
+
+jwt:
+  token:
+    secret: jwtappdemo
+    expired: 360000
