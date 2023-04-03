@@ -20,4 +20,4 @@ spring:
 jwt:
   token:
     secret: jwtappdemo
-    expired: 360000
+    expired: 36000000000000
