@@ -27,11 +27,11 @@ import com.more_community.api.service.UserService;
 public class AuthController {
     @Autowired
     private AuthenticationManager authenticationManager;
-    @Autowired
 
+    @Autowired
     private JwtTokenProvider jwtTokenProvider;
-    @Autowired
 
+    @Autowired
     private UserService userService;
 
 

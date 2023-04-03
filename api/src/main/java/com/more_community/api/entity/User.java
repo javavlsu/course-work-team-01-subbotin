@@ -3,8 +3,8 @@ package com.more_community.api.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @Entity
@@ -23,4 +23,9 @@ public class User {
     private String email;
     @Column(nullable = false)
     private String password;
+    @ManyToMany(mappedBy = "followers")
+    private Set<Community> followedCommunities = new HashSet<>();
+    @OneToMany(mappedBy="owner", fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL)
+    private Set<Community> myCommunities = new HashSet<>();
 }
