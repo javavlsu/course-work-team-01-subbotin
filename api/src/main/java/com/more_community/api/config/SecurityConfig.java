@@ -1,5 +1,7 @@
 package com.more_community.api.config;
 
+import com.more_community.api.security.jwt.JwtConfigurer;
+import com.more_community.api.security.jwt.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,8 +14,6 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
-import com.more_community.api.security.jwt.JwtConfigurer;
-import com.more_community.api.security.jwt.JwtTokenProvider;
 
 @Configuration
 @EnableWebSecurity
@@ -33,7 +33,6 @@ public class SecurityConfig {
                 .and()
                 .authorizeRequests()
                 .requestMatchers(LOGIN_ENDPOINT).permitAll()
-//                .anyRequest().authenticated()
                 .and()
                 .apply(new JwtConfigurer(jwtTokenProvider));
 

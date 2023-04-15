@@ -1,0 +1,69 @@
+﻿version: "3.9"
+
+networks:
+  dev:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: "postgres"
+    env_file:
+      - config/.env.local
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dev
+
+  api:
+    container_name: "api"
+    build:
+      context: .
+      dockerfile: config/api/Dockerfile
+    ports:
+      - "5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    links:
+      - postgres
+    env_file:
+      - config/.env.local
+    networks:
+      - dev
+
+  client:
+    container_name: "client"
+    build:
+      context: .
+      dockerfile: config/client/Dockerfile
+    ports:
+      - "3000"
+    networks:
+      - dev
+
+  server:
+    container_name: "server"
+    image: nginx:alpine
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+      - client
+    networks:
+      - dev
+
+volumes:
+  pgdata:

@@ -1,5 +1,7 @@
 package com.more_community.api.security.jwt;
 
+import com.more_community.api.entity.User;
+import com.more_community.api.service.UserService;
 import io.jsonwebtoken.*;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,9 +17,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Base64;
 import java.util.Date;
-
-import com.more_community.api.entity.User;
-import com.more_community.api.service.UserService;
 
 @Component
 public class JwtTokenProvider {
@@ -88,10 +87,6 @@ public class JwtTokenProvider {
         User user = userService.getById(jwtUser.getId()).get();
 
         return user;
-
-//        User user = this.userDetailsService.load;
-//
-//        return user;
     }
 
     public boolean validateToken(String token) throws JwtAuthenticationException {

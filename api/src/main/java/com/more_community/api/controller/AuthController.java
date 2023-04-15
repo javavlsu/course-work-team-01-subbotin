@@ -1,5 +1,12 @@
 package com.more_community.api.controller;
 
+import com.more_community.api.dto.LoginRequest;
+import com.more_community.api.dto.QueryResponse;
+import com.more_community.api.dto.RegistrationRequest;
+import com.more_community.api.entity.Community;
+import com.more_community.api.entity.User;
+import com.more_community.api.security.jwt.JwtTokenProvider;
+import com.more_community.api.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,16 +18,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
-import com.more_community.api.dto.LoginRequest;
-import com.more_community.api.dto.QueryResponse;
-import com.more_community.api.dto.RegistrationRequest;
-import com.more_community.api.entity.User;
-import com.more_community.api.security.jwt.JwtTokenProvider;
-import com.more_community.api.service.UserService;
 
 @RestController
 @RequestMapping(value = "/authentication")
@@ -68,7 +69,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new QueryResponse(HttpStatus.BAD_REQUEST.value()).withErrors(errors));
         }
 
-        User model = User.builder().username(request.getUsername()).avatar(request.getAvatar()).email(request.getEmail()).password(jwtTokenProvider.passwordEncoder().encode(request.getPassword())).build();
+        User model = User.builder().username(request.getUsername()).avatar(request.getAvatar()).email(request.getEmail()).password(jwtTokenProvider.passwordEncoder().encode(request.getPassword())).followedCommunities(new ArrayList<>()).build();
 
         User user = userService.save(model);
 

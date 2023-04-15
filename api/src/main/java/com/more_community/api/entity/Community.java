@@ -1,12 +1,16 @@
 package com.more_community.api.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.minidev.json.annotate.JsonIgnore;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -26,14 +30,16 @@ public class Community {
     @ElementCollection
     private Set<String> keywords;
     private String streamId;
-    @ManyToMany(cascade = { CascadeType.ALL })
+    @ManyToMany(cascade = CascadeType.ALL)
     @JoinTable(
         name = "community_followers",
         joinColumns = { @JoinColumn(name = "community_id") },
         inverseJoinColumns = { @JoinColumn(name = "follower_id") }
     )
-    private Set<User> followers = new HashSet<>();
+    @JsonBackReference
+    private List<User> followers;
     @ManyToOne(optional = false)
     @JoinColumn(nullable=false)
+    @JsonBackReference
     private User owner;
 }

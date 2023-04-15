@@ -1,10 +1,13 @@
 package com.more_community.api.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.List;
 
 @Data
 @Entity
@@ -22,10 +25,12 @@ public class User {
     @Column(nullable = false)
     private String email;
     @Column(nullable = false)
+    @JsonIgnore
     private String password;
     @ManyToMany(mappedBy = "followers")
-    private Set<Community> followedCommunities = new HashSet<>();
-    @OneToMany(mappedBy="owner", fetch = FetchType.LAZY,
-            cascade = CascadeType.ALL)
+    @JsonBackReference
+    private List<Community> followedCommunities;
+    @OneToMany(mappedBy="owner", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JsonBackReference
     private Set<Community> myCommunities = new HashSet<>();
 }

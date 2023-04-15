@@ -3,10 +3,10 @@ package com.more_community.api.service;
 import com.more_community.api.entity.Community;
 import com.more_community.api.entity.User;
 import com.more_community.api.repository.CommunityRepository;
-import com.more_community.api.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -36,16 +36,14 @@ public class CommunityService {
         return communityRepository.findCommunityByOwner(user);
     }
 
-    public Set<User> followCommunity(User user, Community community) {
-        Set<User> followers = community.getFollowers();
-
-        followers.add(user);
+    public List<User> followCommunity(User user, Community community) {
+        community.getFollowers().add(user);
 
         return communityRepository.save(community).getFollowers();
     }
 
-    public Set<User> unfollowCommunity(User user, Community community) {
-        Set<User> followers = community.getFollowers();
+    public List<User> unfollowCommunity(User user, Community community) {
+        List<User> followers = community.getFollowers();
 
         followers.remove(user);
 

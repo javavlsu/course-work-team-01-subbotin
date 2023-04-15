@@ -1,17 +1,12 @@
 package com.more_community.api.security;
 
-import com.more_community.api.security.jwt.JwtAuthenticationException;
-import org.springframework.dao.DataIntegrityViolationException;
+import com.more_community.api.dto.QueryResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-
-import com.more_community.api.dto.QueryResponse;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.sql.SQLException;

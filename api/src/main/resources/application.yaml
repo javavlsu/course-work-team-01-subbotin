@@ -16,6 +16,8 @@ spring:
       ddl-auto: update
     properties:
       hibernate.globally_quoted_identifiers: true
+      hibernate:
+        show_sql: true
 
 jwt:
   token:

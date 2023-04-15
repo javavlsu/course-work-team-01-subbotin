@@ -1,7 +1,6 @@
 package com.more_community.api.controller;
 
 import com.more_community.api.dto.QueryResponse;
-import com.more_community.api.dto.RegistrationRequest;
 import com.more_community.api.dto.SaveCommunityRequest;
 import com.more_community.api.dto.UpdateCommunityRequest;
 import com.more_community.api.entity.Community;
@@ -14,7 +13,6 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -42,7 +40,7 @@ public class CommunityController {
     public ResponseEntity create(@Valid @RequestBody SaveCommunityRequest request, HttpServletRequest req) {
         User user = jwtTokenProvider.getUser(req);
 
-        Community model = Community.builder().owner(user).name(request.getName()).avatar(request.getAvatar()).description(request.getDescription()).banner(request.getBanner()).keywords(request.getKeywords()).build();
+        Community model = Community.builder().followers(new ArrayList<>()).owner(user).name(request.getName()).avatar(request.getAvatar()).description(request.getDescription()).banner(request.getBanner()).keywords(request.getKeywords()).build();
 
         communityService.save(model);
 
@@ -106,7 +104,7 @@ public class CommunityController {
 
         Community community = existingCommunity.get();
 
-        Set<User> followers = community.getFollowers();
+        List<User> followers = community.getFollowers();
 
         return ResponseEntity.ok(followers);
     }
@@ -123,7 +121,7 @@ public class CommunityController {
 
         Community community = existingCommunity.get();
 
-        Set<User> followers = community.getFollowers();
+        List<User> followers = community.getFollowers();
 
         if (followers.contains(user)) {
             communityService.unfollowCommunity(user, community);
