@@ -41,10 +41,8 @@ public class JwtTokenFilter extends GenericFilterBean {
                 if (auth != null) {
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
-            } else {
-                throw new JwtAuthenticationException("");
             }
-        } catch (JwtAuthenticationException | MalformedJwtException e) {
+        } catch (JwtAuthenticationException e) {
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
             response.setStatus(HttpStatus.UNAUTHORIZED.value());

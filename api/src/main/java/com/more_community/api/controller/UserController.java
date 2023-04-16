@@ -1,11 +1,13 @@
 package com.more_community.api.controller;
 
 import com.more_community.api.annotation.IsLogined;
+import com.more_community.api.entity.Comment;
 import com.more_community.api.entity.Community;
 import com.more_community.api.entity.Post;
 import com.more_community.api.entity.User;
 import com.more_community.api.security.jwt.JwtAuthenticationException;
 import com.more_community.api.security.jwt.JwtTokenProvider;
+import com.more_community.api.service.CommentService;
 import com.more_community.api.service.CommunityService;
 import com.more_community.api.service.PostService;
 import com.more_community.api.service.UserService;
@@ -27,6 +29,9 @@ public class UserController {
 
     @Autowired
     private PostService postService;
+
+    @Autowired
+    private CommentService commentService;
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
@@ -59,5 +64,15 @@ public class UserController {
         List<Post> posts = postService.getLikedPosts(user.getId());
 
         return ResponseEntity.ok(posts);
+    }
+
+    @GetMapping("/my-comments")
+    @IsLogined
+    public ResponseEntity getMyComments(HttpServletRequest req) throws JwtAuthenticationException {
+        User user = jwtTokenProvider.getUser(req);
+
+        List<Comment> comments = commentService.getUserComments(user);
+
+        return ResponseEntity.ok(comments);
     }
 }

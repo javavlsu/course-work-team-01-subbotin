@@ -33,4 +33,7 @@ public class User {
     @OneToMany(mappedBy="owner", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JsonBackReference
     private Set<Community> myCommunities = new HashSet<>();
+    @OneToMany(mappedBy="user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JsonBackReference
+    private Set<Comment> myComments = new HashSet<>();
 }
