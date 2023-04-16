@@ -3,6 +3,7 @@ package com.more_community.api.security.jwt;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.more_community.api.dto.QueryResponse;
+import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
@@ -18,7 +19,7 @@ import java.io.IOException;
 
 public class JwtTokenFilter extends GenericFilterBean {
 
-    private JwtTokenProvider jwtTokenProvider;
+    private final JwtTokenProvider jwtTokenProvider;
 
     public JwtTokenFilter(JwtTokenProvider jwtTokenProvider) {
         this.jwtTokenProvider = jwtTokenProvider;
@@ -34,14 +35,16 @@ public class JwtTokenFilter extends GenericFilterBean {
         String token = jwtTokenProvider.resolveToken(request);
 
         try {
-            if (token != null && jwtTokenProvider.validateToken(token)) {
+            if (token != null && jwtTokenProvider.validateToken(request)) {
                 Authentication auth = jwtTokenProvider.getAuthentication(token);
 
                 if (auth != null) {
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
+            } else {
+                throw new JwtAuthenticationException("");
             }
-        } catch (JwtAuthenticationException e) {
+        } catch (JwtAuthenticationException | MalformedJwtException e) {
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
@@ -58,5 +61,4 @@ public class JwtTokenFilter extends GenericFilterBean {
         ObjectMapper mapper = new ObjectMapper();
         return mapper.writeValueAsString(object);
     }
-
 }

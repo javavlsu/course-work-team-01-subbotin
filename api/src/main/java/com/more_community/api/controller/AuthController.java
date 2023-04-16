@@ -3,7 +3,6 @@ package com.more_community.api.controller;
 import com.more_community.api.dto.LoginRequest;
 import com.more_community.api.dto.QueryResponse;
 import com.more_community.api.dto.RegistrationRequest;
-import com.more_community.api.entity.Community;
 import com.more_community.api.entity.User;
 import com.more_community.api.security.jwt.JwtTokenProvider;
 import com.more_community.api.service.UserService;
@@ -60,11 +59,11 @@ public class AuthController {
         User existingUserByUsername = userService.getByUsername(request.getUsername());
         Optional<User> existingUserByEmail = userService.getByEmail(request.getEmail());
 
-        if (existingUserByUsername != null || !existingUserByEmail.isEmpty()) {
+        if (existingUserByUsername != null || existingUserByEmail.isEmpty()) {
             Map<Object, Object> errors = new HashMap<>();
 
             if (existingUserByUsername != null) errors.put("username", "Такой логин уже занят");
-            if (!existingUserByEmail.isEmpty()) errors.put("email", "Такая почта уже занята");
+            if (existingUserByEmail.isEmpty()) errors.put("email", "Такая почта уже занята");
 
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new QueryResponse(HttpStatus.BAD_REQUEST.value()).withErrors(errors));
         }

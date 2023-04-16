@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Base64;
 import java.util.Date;
+import java.util.Optional;
 
 @Component
 public class JwtTokenProvider {
@@ -34,8 +35,7 @@ public class JwtTokenProvider {
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
-        BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
-        return bCryptPasswordEncoder;
+        return new BCryptPasswordEncoder();
     }
 
     @PostConstruct
@@ -77,29 +77,31 @@ public class JwtTokenProvider {
         return null;
     }
 
-    public User getUser(HttpServletRequest req) {
+    public User getUser(HttpServletRequest req) throws JwtAuthenticationException {
         String token = resolveToken(req);
 
-        Authentication auth  = getAuthentication(token);
+        Authentication auth = getAuthentication(token);
 
         JwtUser jwtUser = (JwtUser) auth.getPrincipal();
 
-        User user = userService.getById(jwtUser.getId()).get();
+        Optional<User> existingUser = userService.getById(jwtUser.getId());
 
-        return user;
+        if (existingUser.isEmpty()) {
+            throw new JwtAuthenticationException("");
+        }
+
+        return existingUser.get();
     }
 
-    public boolean validateToken(String token) throws JwtAuthenticationException {
+    public boolean validateToken(HttpServletRequest req) throws JwtAuthenticationException {
+        String token = resolveToken(req);
+
         try {
             Jws<Claims> claims = Jwts.parser().setSigningKey(secret).parseClaimsJws(token);
 
-            if (claims.getBody().getExpiration().before(new Date())) {
-                return false;
-            }
-
-            return true;
+            return !claims.getBody().getExpiration().before(new Date());
         } catch (JwtException | IllegalArgumentException e) {
-            throw new JwtAuthenticationException("JWT token is expired or invalid");
+            throw new JwtAuthenticationException("");
         }
     }
 }

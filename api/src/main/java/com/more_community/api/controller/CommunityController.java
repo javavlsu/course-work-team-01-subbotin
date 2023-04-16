@@ -1,13 +1,14 @@
 package com.more_community.api.controller;
 
+import com.more_community.api.annotation.IsLogined;
 import com.more_community.api.dto.QueryResponse;
 import com.more_community.api.dto.SaveCommunityRequest;
 import com.more_community.api.dto.UpdateCommunityRequest;
 import com.more_community.api.entity.Community;
 import com.more_community.api.entity.User;
+import com.more_community.api.security.jwt.JwtAuthenticationException;
 import com.more_community.api.security.jwt.JwtTokenProvider;
 import com.more_community.api.service.CommunityService;
-import com.more_community.api.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,9 +25,6 @@ public class CommunityController {
     private CommunityService communityService;
 
     @Autowired
-    private UserService userService;
-
-    @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
     @GetMapping
@@ -37,7 +35,8 @@ public class CommunityController {
     }
 
     @PostMapping
-    public ResponseEntity create(@Valid @RequestBody SaveCommunityRequest request, HttpServletRequest req) {
+    @IsLogined
+    public ResponseEntity create(@Valid @RequestBody SaveCommunityRequest request, HttpServletRequest req) throws JwtAuthenticationException {
         User user = jwtTokenProvider.getUser(req);
 
         Community model = Community.builder().followers(new ArrayList<>()).owner(user).name(request.getName()).avatar(request.getAvatar()).description(request.getDescription()).banner(request.getBanner()).keywords(request.getKeywords()).build();
@@ -59,7 +58,8 @@ public class CommunityController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity update(@Valid @RequestBody UpdateCommunityRequest request, @PathVariable("id") long communityId, HttpServletRequest req) {
+    @IsLogined
+    public ResponseEntity update(@Valid @RequestBody UpdateCommunityRequest request, @PathVariable("id") long communityId, HttpServletRequest req) throws JwtAuthenticationException {
         User user = jwtTokenProvider.getUser(req);
 
         Optional<Community> existingCommunity = communityService.getById(communityId);
@@ -82,6 +82,7 @@ public class CommunityController {
     }
 
     @DeleteMapping("/{id}")
+    @IsLogined
     public ResponseEntity delete(@PathVariable("id") long communityId) {
         Optional<Community> existingCommunity = communityService.getById(communityId);
 
@@ -110,7 +111,8 @@ public class CommunityController {
     }
 
     @PostMapping("/{id}/follow")
-    public ResponseEntity getFollowedCommunities(@PathVariable("id") long communityId, HttpServletRequest req) {
+    @IsLogined
+    public ResponseEntity getFollowedCommunities(@PathVariable("id") long communityId, HttpServletRequest req) throws JwtAuthenticationException {
         User user = jwtTokenProvider.getUser(req);
 
         Optional<Community> existingCommunity = communityService.getById(communityId);
