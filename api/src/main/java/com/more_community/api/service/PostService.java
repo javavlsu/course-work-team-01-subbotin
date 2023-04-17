@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class PostService {
@@ -42,5 +43,17 @@ public class PostService {
         likes.remove(user);
 
         return postRepository.save(post).getLikes().size();
+    }
+
+    public Set<String> addAttachments(Set<String> attachments, Post post) {
+        Set<String> postAttachments = post.getAttachments();
+
+        postAttachments.clear();
+
+        postAttachments.addAll(attachments);
+
+        post.setAttachments(postAttachments);
+
+        return postRepository.save(post).getAttachments();
     }
 }

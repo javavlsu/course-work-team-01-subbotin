@@ -8,6 +8,7 @@ import com.more_community.api.entity.User;
 import com.more_community.api.security.jwt.JwtAuthenticationException;
 import com.more_community.api.security.jwt.JwtTokenProvider;
 import com.more_community.api.service.CommunityService;
+import com.more_community.api.service.FileService;
 import com.more_community.api.service.PostService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -16,10 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping(value = "/posts")
@@ -29,6 +27,9 @@ public class PostController {
 
     @Autowired
     private CommunityService communityService;
+
+    @Autowired
+    private FileService fileService;
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
@@ -59,6 +60,15 @@ public class PostController {
 
         Post model = Post.builder().title(request.getTitle()).content(request.getContent()).likes(new ArrayList<>()).community(community).build();
 
+        Set<String> attachments = new HashSet<>();
+
+        for (String fileBase64 : request.getFiles()
+        ) {
+            attachments.add(fileService.upload(fileBase64, Arrays.asList("community_" + model.getCommunity().getId(), "post_" + model.getId())));
+        }
+
+        model.setAttachments(attachments);
+
         postService.save(model);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(model));
@@ -77,7 +87,7 @@ public class PostController {
 
     @PutMapping("/{id}")
     @IsLogined
-    public ResponseEntity update(@Valid @RequestBody UpdatePostRequest request, @PathVariable("id") long postId, HttpServletRequest req) throws JwtAuthenticationException {
+    public ResponseEntity update(@Valid @RequestBody SavePostRequest request, @PathVariable("id") long postId, HttpServletRequest req) throws JwtAuthenticationException {
         User user = jwtTokenProvider.getUser(req);
 
         Optional<Post> existingPost = postService.getById(postId);
@@ -87,10 +97,6 @@ public class PostController {
         }
 
         Post post = existingPost.get();
-
-        if (post.getId() != postId) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого поста не существует"));
-        }
 
         Optional<Community> existingCommunity = communityService.getById(post.getId());
 
@@ -104,7 +110,18 @@ public class PostController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new QueryResponse(HttpStatus.FORBIDDEN.value()).withMessage("Нет доступа"));
         }
 
-        Post model = Post.builder().id(post.getId()).title(request.getTitle()).content(request.getContent()).likes(new ArrayList<>()).community(community).build();
+        Post model = Post.builder().id(post.getId()).title(request.getTitle()).content(request.getContent()).likes(post.getLikes()).community(community).build();
+
+        fileService.delete("post_" + post.getId());
+
+        Set<String> attachments = new HashSet<>();
+
+        for (String fileBase64 : request.getFiles()
+        ) {
+            attachments.add(fileService.upload(fileBase64, Arrays.asList("community_" + model.getCommunity().getId(), "post_" + model.getId())));
+        }
+
+        model.setAttachments(attachments);
 
         postService.save(model);
 
@@ -137,6 +154,8 @@ public class PostController {
         }
 
         postService.delete(postId);
+
+        fileService.delete("post_" + post.getId());
 
         return ResponseEntity.ok(true);
     }

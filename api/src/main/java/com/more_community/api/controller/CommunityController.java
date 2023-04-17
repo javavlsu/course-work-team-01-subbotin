@@ -9,6 +9,7 @@ import com.more_community.api.entity.User;
 import com.more_community.api.security.jwt.JwtAuthenticationException;
 import com.more_community.api.security.jwt.JwtTokenProvider;
 import com.more_community.api.service.CommunityService;
+import com.more_community.api.service.FileService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ public class CommunityController {
     private CommunityService communityService;
 
     @Autowired
+    private FileService fileService;
+
+    @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
     @GetMapping
@@ -39,7 +43,13 @@ public class CommunityController {
     public ResponseEntity create(@Valid @RequestBody SaveCommunityRequest request, HttpServletRequest req) throws JwtAuthenticationException {
         User user = jwtTokenProvider.getUser(req);
 
-        Community model = Community.builder().followers(new ArrayList<>()).owner(user).name(request.getName()).avatar(request.getAvatar()).description(request.getDescription()).banner(request.getBanner()).keywords(request.getKeywords()).build();
+        Community model = Community.builder().followers(new ArrayList<>()).owner(user).name(request.getName()).description(request.getDescription()).keywords(request.getKeywords()).build();
+
+        model.setAvatar(fileService.upload(request.getAvatar(), Arrays.asList("community_" + model.getId(), "community_" + model.getId() + "_avatar")));
+
+        if (request.getBanner() != null) {
+            model.setBanner(fileService.upload(request.getBanner(), Arrays.asList("community_" + model.getId(), "community_" + model.getId() + "_banner")));
+        }
 
         communityService.save(model);
 
@@ -59,7 +69,7 @@ public class CommunityController {
 
     @PutMapping("/{id}")
     @IsLogined
-    public ResponseEntity update(@Valid @RequestBody UpdateCommunityRequest request, @PathVariable("id") long communityId, HttpServletRequest req) throws JwtAuthenticationException {
+    public ResponseEntity update(@Valid @RequestBody SaveCommunityRequest request, @PathVariable("id") long communityId, HttpServletRequest req) throws JwtAuthenticationException {
         User user = jwtTokenProvider.getUser(req);
 
         Optional<Community> existingCommunity = communityService.getById(communityId);
@@ -70,11 +80,15 @@ public class CommunityController {
 
         Community community = existingCommunity.get();
 
-        if (community.getId() != communityId) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого сообщества не существует"));
-        }
-
         Community model = Community.builder().id(community.getId()).owner(user).name(request.getName()).avatar(request.getAvatar()).description(request.getDescription()).banner(request.getBanner()).keywords(request.getKeywords()).build();
+
+        fileService.delete("community_" + model.getId() + "_avatar");
+        model.setAvatar(fileService.upload(request.getAvatar(), Arrays.asList("community_" + model.getId(), "community_" + model.getId() + "_avatar")));
+
+        if (request.getBanner() != null) {
+            fileService.delete("community_" + model.getId() + "_banner");
+            model.setBanner(fileService.upload(request.getBanner(), Arrays.asList("community_" + model.getId(), "community_" + model.getId() + "_banner")));
+        }
 
         communityService.save(model);
 
@@ -91,6 +105,8 @@ public class CommunityController {
         }
 
         communityService.delete(communityId);
+
+        fileService.delete("community_" + communityId);
 
         return ResponseEntity.ok(true);
     }
