@@ -5,6 +5,7 @@ import com.more_community.api.dto.QueryResponse;
 import com.more_community.api.dto.RegistrationRequest;
 import com.more_community.api.entity.User;
 import com.more_community.api.security.jwt.JwtTokenProvider;
+import com.more_community.api.service.FileService;
 import com.more_community.api.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,10 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping(value = "/authentication")
@@ -33,6 +31,9 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private FileService fileService;
 
 
     @PostMapping("login")
@@ -69,6 +70,8 @@ public class AuthController {
         }
 
         User model = User.builder().username(request.getUsername()).avatar(request.getAvatar()).email(request.getEmail()).password(jwtTokenProvider.passwordEncoder().encode(request.getPassword())).followedCommunities(new ArrayList<>()).build();
+
+        model.setAvatar(fileService.upload(request.getAvatar(), Arrays.asList("user_" + model.getId(), "user_" + model.getId() + "_avatar")));
 
         User user = userService.save(model);
 

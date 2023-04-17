@@ -3,6 +3,8 @@ package com.more_community.api.dto;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class SavePostRequest {
     @NotNull(message = "Это поле обязательно для заполнения")
@@ -11,4 +13,5 @@ public class SavePostRequest {
     private String content;
     @NotNull(message = "Это поле обязательно")
     private Long communityId;
+    private List<String> files;
 }

@@ -37,5 +37,7 @@ public class Post {
     private Community community;
     @OneToMany(mappedBy="post", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JsonBackReference
-    private Set<Comment> posts = new HashSet<>();
+    private Set<Comment> comments = new HashSet<>();
+    @ElementCollection
+    private Set<String> attachments;
 }

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping(value = "/comments")
@@ -134,7 +135,7 @@ public class CommentController {
 
         Post post = existingPost.get();
 
-        List<Comment> comments = commentService.getPostComments(post);
+        Set<Comment> comments = post.getComments();
 
         return ResponseEntity.ok(comments);
     }
