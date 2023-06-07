@@ -1,15 +1,16 @@
 package com.more_community.api.controller;
 
 import com.more_community.api.annotation.IsLogined;
-import com.more_community.api.dto.QueryResponse;
-import com.more_community.api.dto.SaveCommunityRequest;
-import com.more_community.api.dto.UpdateCommunityRequest;
-import com.more_community.api.entity.Community;
+import com.more_community.api.dto.request.QueryResponse;
+import com.more_community.api.dto.request.SaveCommunityRequest;
+import com.more_community.api.dto.response.CommunityResponse;
+import com.more_community.api.dto.response.FollowResponse;
+import com.more_community.api.dto.response.PaginationResponse;
 import com.more_community.api.entity.User;
-import com.more_community.api.security.jwt.JwtAuthenticationException;
-import com.more_community.api.security.jwt.JwtTokenProvider;
+import com.more_community.api.exceptions.CommunityNotFound;
+import com.more_community.api.exceptions.NoIsOwnerCommunity;
+import com.more_community.api.exceptions.UserNotFound;
 import com.more_community.api.service.CommunityService;
-import com.more_community.api.service.FileService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,128 +26,84 @@ public class CommunityController {
     @Autowired
     private CommunityService communityService;
 
-    @Autowired
-    private FileService fileService;
-
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
-
     @GetMapping
-    public ResponseEntity getAll() {
-        List<Community> communities = communityService.getAll();
+    public ResponseEntity<QueryResponse> getAll(@RequestParam(value = "page", defaultValue = "1") Integer page, @RequestParam(value = "limit", defaultValue = "12") Integer limit, HttpServletRequest req) {
+        PaginationResponse<CommunityResponse> communitiesResponse = communityService.getAll(page, limit, req);
 
-        return ResponseEntity.ok(communities);
+        return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(communitiesResponse));
     }
 
     @PostMapping
     @IsLogined
-    public ResponseEntity create(@Valid @RequestBody SaveCommunityRequest request, HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> create(@Valid @RequestBody SaveCommunityRequest request, HttpServletRequest req) throws UserNotFound {
+        try {
+            CommunityResponse communityResponse = communityService.save(request, req);
 
-        Community model = Community.builder().followers(new ArrayList<>()).owner(user).name(request.getName()).description(request.getDescription()).keywords(request.getKeywords()).build();
-
-        model.setAvatar(fileService.upload(request.getAvatar(), Arrays.asList("community_" + model.getId(), "community_" + model.getId() + "_avatar")));
-
-        if (request.getBanner() != null) {
-            model.setBanner(fileService.upload(request.getBanner(), Arrays.asList("community_" + model.getId(), "community_" + model.getId() + "_banner")));
+            return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(communityResponse));
+        } catch (UserNotFound e) {
+            throw new UserNotFound();
         }
-
-        communityService.save(model);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(model));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity getById(@PathVariable("id") long communityId) {
-        Optional<Community> existingCommunity = communityService.getById(communityId);
+    public ResponseEntity<QueryResponse> getById(@PathVariable("id") long communityId, HttpServletRequest req) throws CommunityNotFound {
+        try {
+            CommunityResponse communityResponse = communityService.getById(communityId, req);
 
-        if (existingCommunity.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого сообщества не существует"));
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(communityResponse));
+        } catch (CommunityNotFound e) {
+            throw new CommunityNotFound();
         }
-
-        return ResponseEntity.ok(existingCommunity.get());
     }
 
     @PutMapping("/{id}")
     @IsLogined
-    public ResponseEntity update(@Valid @RequestBody SaveCommunityRequest request, @PathVariable("id") long communityId, HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> update(@Valid @RequestBody SaveCommunityRequest request, @PathVariable("id") long communityId, HttpServletRequest req) throws CommunityNotFound, NoIsOwnerCommunity {
+        try {
+            CommunityResponse communityResponse = communityService.update(communityId, request, req);
 
-        Optional<Community> existingCommunity = communityService.getById(communityId);
-
-        if (existingCommunity.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого сообщества не существует"));
+            return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(communityResponse));
+        } catch (CommunityNotFound e) {
+            throw new CommunityNotFound();
+        } catch (NoIsOwnerCommunity e) {
+            throw new NoIsOwnerCommunity();
         }
-
-        Community community = existingCommunity.get();
-
-        Community model = Community.builder().id(community.getId()).owner(user).name(request.getName()).avatar(request.getAvatar()).description(request.getDescription()).banner(request.getBanner()).keywords(request.getKeywords()).build();
-
-        fileService.delete("community_" + model.getId() + "_avatar");
-        model.setAvatar(fileService.upload(request.getAvatar(), Arrays.asList("community_" + model.getId(), "community_" + model.getId() + "_avatar")));
-
-        if (request.getBanner() != null) {
-            fileService.delete("community_" + model.getId() + "_banner");
-            model.setBanner(fileService.upload(request.getBanner(), Arrays.asList("community_" + model.getId(), "community_" + model.getId() + "_banner")));
-        }
-
-        communityService.save(model);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(model));
     }
 
     @DeleteMapping("/{id}")
     @IsLogined
-    public ResponseEntity delete(@PathVariable("id") long communityId) {
-        Optional<Community> existingCommunity = communityService.getById(communityId);
+    public ResponseEntity<QueryResponse> delete(@PathVariable("id") long communityId, HttpServletRequest req) throws CommunityNotFound, NoIsOwnerCommunity {
+        try {
+            communityService.delete(communityId, req);
 
-        if (existingCommunity.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого сообщества не существует"));
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(true));
+        } catch (CommunityNotFound e) {
+            throw new CommunityNotFound();
+        } catch (NoIsOwnerCommunity e) {
+            throw new NoIsOwnerCommunity();
         }
-
-        communityService.delete(communityId);
-
-        fileService.delete("community_" + communityId);
-
-        return ResponseEntity.ok(true);
     }
 
     @GetMapping("/{id}/followers")
-    public ResponseEntity getFollowers(@PathVariable("id") long communityId) {
-        Optional<Community> existingCommunity = communityService.getById(communityId);
+    public ResponseEntity<QueryResponse> getFollowers(@PathVariable("id") long communityId) throws CommunityNotFound {
+        try {
+            List<User> followers = communityService.getCommunityFollowers(communityId);
 
-        if (existingCommunity.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого сообщества не существует"));
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(followers));
+        } catch (CommunityNotFound e) {
+            throw new CommunityNotFound();
         }
-
-        Community community = existingCommunity.get();
-
-        List<User> followers = community.getFollowers();
-
-        return ResponseEntity.ok(followers);
     }
 
     @PostMapping("/{id}/follow")
     @IsLogined
-    public ResponseEntity getFollowedCommunities(@PathVariable("id") long communityId, HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> follow(@PathVariable("id") long communityId, HttpServletRequest req) throws CommunityNotFound {
+        try {
+            FollowResponse followResponse = communityService.follow(communityId, req);
 
-        Optional<Community> existingCommunity = communityService.getById(communityId);
-
-        if (existingCommunity.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого сообщества не существует"));
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(followResponse));
+        } catch (CommunityNotFound e) {
+            throw new CommunityNotFound();
         }
-
-        Community community = existingCommunity.get();
-
-        List<User> followers = community.getFollowers();
-
-        if (followers.contains(user)) {
-            communityService.unfollowCommunity(user, community);
-        } else {
-            communityService.followCommunity(user, community);
-        }
-
-        return ResponseEntity.ok(followers.contains(user));
     }
 }

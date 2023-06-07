@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,19 +29,16 @@ public class Community {
     @ElementCollection
     private Set<String> keywords;
     private String streamId;
-    @ManyToMany(cascade = CascadeType.ALL)
-    @JoinTable(
-        name = "community_followers",
-        joinColumns = { @JoinColumn(name = "community_id") },
-        inverseJoinColumns = { @JoinColumn(name = "follower_id") }
-    )
+    @ManyToMany
+    @JoinTable(name = "community_followers", joinColumns = {@JoinColumn(name = "community_id")}, inverseJoinColumns = {@JoinColumn(name = "follower_id")})
     @JsonBackReference
     private List<User> followers;
     @ManyToOne(optional = false)
-    @JoinColumn(nullable=false)
+    @JoinColumn(nullable = false)
     @JsonBackReference
     private User owner;
-    @OneToMany(mappedBy="community", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "community", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonBackReference
     private Set<Post> posts = new HashSet<>();
+    private Date createdAt;
 }

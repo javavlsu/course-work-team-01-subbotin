@@ -5,6 +5,8 @@ server:
 
 
 spring:
+  main:
+    allow-circular-references: true
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${POSTGRES_USER}

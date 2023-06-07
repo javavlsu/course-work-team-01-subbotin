@@ -2,8 +2,7 @@ package com.more_community.api.security.jwt;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.more_community.api.dto.QueryResponse;
-import io.jsonwebtoken.MalformedJwtException;
+import com.more_community.api.dto.request.QueryResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
@@ -26,8 +25,7 @@ public class JwtTokenFilter extends GenericFilterBean {
     }
 
     @Override
-    public void doFilter(ServletRequest req, ServletResponse res, FilterChain filterChain)
-            throws IOException, ServletException {
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain filterChain) throws IOException, ServletException {
 
         HttpServletResponse response = ((HttpServletResponse) res);
         HttpServletRequest request = ((HttpServletRequest) req);

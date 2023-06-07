@@ -1,14 +1,15 @@
 package com.more_community.api.controller;
 
 import com.more_community.api.annotation.IsLogined;
-import com.more_community.api.dto.*;
-import com.more_community.api.entity.Community;
-import com.more_community.api.entity.Post;
+import com.more_community.api.dto.request.QueryResponse;
+import com.more_community.api.dto.request.SavePostRequest;
+import com.more_community.api.dto.response.LikeResponse;
+import com.more_community.api.dto.response.PaginationResponse;
+import com.more_community.api.dto.response.PostResponse;
 import com.more_community.api.entity.User;
-import com.more_community.api.security.jwt.JwtAuthenticationException;
-import com.more_community.api.security.jwt.JwtTokenProvider;
-import com.more_community.api.service.CommunityService;
-import com.more_community.api.service.FileService;
+import com.more_community.api.exceptions.CommunityNotFound;
+import com.more_community.api.exceptions.NoIsOwnerCommunity;
+import com.more_community.api.exceptions.PostNotFound;
 import com.more_community.api.service.PostService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -25,192 +26,101 @@ public class PostController {
     @Autowired
     private PostService postService;
 
-    @Autowired
-    private CommunityService communityService;
-
-    @Autowired
-    private FileService fileService;
-
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
-
     @GetMapping
-    public ResponseEntity getAll() {
-        List<Post> posts = postService.getAll();
+    public ResponseEntity<QueryResponse> getAll(HttpServletRequest req) {
+        List<PostResponse> postsResponse = postService.getAll(req);
 
-        return ResponseEntity.ok(posts);
+        return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(postsResponse));
     }
 
     @PostMapping
     @IsLogined
-    public ResponseEntity create(@Valid @RequestBody SavePostRequest request, HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> create(@Valid @RequestBody SavePostRequest request, HttpServletRequest req) throws CommunityNotFound, NoIsOwnerCommunity {
+        try {
+            PostResponse postResponse = postService.save(request, req);
 
-        Optional<Community> existingCommunity = communityService.getById(request.getCommunityId());
-
-        if (existingCommunity.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого сообщества не существует"));
+            return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(postResponse));
+        } catch (CommunityNotFound e) {
+            throw new CommunityNotFound();
+        } catch (NoIsOwnerCommunity e) {
+            throw new NoIsOwnerCommunity();
         }
-
-        Community community = existingCommunity.get();
-
-        if (!Objects.equals(community.getOwner(), user)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new QueryResponse(HttpStatus.FORBIDDEN.value()).withMessage("Нет доступа"));
-        }
-
-        Post model = Post.builder().title(request.getTitle()).content(request.getContent()).likes(new ArrayList<>()).community(community).build();
-
-        Set<String> attachments = new HashSet<>();
-
-        for (String fileBase64 : request.getFiles()
-        ) {
-            attachments.add(fileService.upload(fileBase64, Arrays.asList("community_" + model.getCommunity().getId(), "post_" + model.getId())));
-        }
-
-        model.setAttachments(attachments);
-
-        postService.save(model);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(model));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity getById(@PathVariable("id") long postId) {
-        Optional<Post> existingPost = postService.getById(postId);
+    public ResponseEntity<QueryResponse> getById(@PathVariable("id") long postId, HttpServletRequest req) throws PostNotFound {
+        try {
+            PostResponse postResponse = postService.getById(postId, req);
 
-        if (existingPost.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого поста не существует"));
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(postResponse));
+        } catch (PostNotFound e) {
+            throw new PostNotFound();
         }
-
-        return ResponseEntity.ok(existingPost.get());
     }
 
     @PutMapping("/{id}")
     @IsLogined
-    public ResponseEntity update(@Valid @RequestBody SavePostRequest request, @PathVariable("id") long postId, HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> update(@Valid @RequestBody SavePostRequest request, @PathVariable("id") long postId, HttpServletRequest req) throws PostNotFound, CommunityNotFound, NoIsOwnerCommunity {
+        try {
+            PostResponse postResponse = postService.update(postId, request, req);
 
-        Optional<Post> existingPost = postService.getById(postId);
-
-        if (existingPost.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого поста не существует"));
+            return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(postResponse));
+        } catch (PostNotFound e) {
+            throw new PostNotFound();
+        } catch (CommunityNotFound e) {
+            throw new CommunityNotFound();
+        } catch (NoIsOwnerCommunity e) {
+            throw new NoIsOwnerCommunity();
         }
-
-        Post post = existingPost.get();
-
-        Optional<Community> existingCommunity = communityService.getById(post.getId());
-
-        if (existingCommunity.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого сообщества не существует"));
-        }
-
-        Community community = existingCommunity.get();
-
-        if (!Objects.equals(community.getOwner(), user)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new QueryResponse(HttpStatus.FORBIDDEN.value()).withMessage("Нет доступа"));
-        }
-
-        Post model = Post.builder().id(post.getId()).title(request.getTitle()).content(request.getContent()).likes(post.getLikes()).community(community).build();
-
-        fileService.delete("post_" + post.getId());
-
-        Set<String> attachments = new HashSet<>();
-
-        for (String fileBase64 : request.getFiles()
-        ) {
-            attachments.add(fileService.upload(fileBase64, Arrays.asList("community_" + model.getCommunity().getId(), "post_" + model.getId())));
-        }
-
-        model.setAttachments(attachments);
-
-        postService.save(model);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(model));
     }
 
     @DeleteMapping("/{id}")
     @IsLogined
-    public ResponseEntity delete(@PathVariable("id") long postId, HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> delete(@PathVariable("id") long postId, HttpServletRequest req) throws PostNotFound, CommunityNotFound, NoIsOwnerCommunity {
+        try {
+            postService.delete(postId, req);
 
-        Optional<Post> existingPost = postService.getById(postId);
-
-        if (existingPost.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого поста не существует"));
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(true));
+        } catch (PostNotFound e) {
+            throw new PostNotFound();
+        } catch (CommunityNotFound e) {
+            throw new CommunityNotFound();
+        } catch (NoIsOwnerCommunity e) {
+            throw new NoIsOwnerCommunity();
         }
-
-        Post post = existingPost.get();
-
-        Optional<Community> existingCommunity = communityService.getById(post.getId());
-
-        if (existingCommunity.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого сообщества не существует"));
-        }
-
-        Community community = existingCommunity.get();
-
-        if (!Objects.equals(community.getOwner(), user)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new QueryResponse(HttpStatus.FORBIDDEN.value()).withMessage("Нет доступа"));
-        }
-
-        postService.delete(postId);
-
-        fileService.delete("post_" + post.getId());
-
-        return ResponseEntity.ok(true);
     }
 
     @GetMapping("/community/{id}")
-    public ResponseEntity getCommunityPosts(@PathVariable("id") long communityId) {
-        Optional<Community> existingCommunity = communityService.getById(communityId);
+    public ResponseEntity<QueryResponse> getCommunityPosts(@RequestParam(value = "page", defaultValue = "1") Integer page, @RequestParam(value = "limit", defaultValue = "10") Integer limit, @PathVariable("id") long communityId, HttpServletRequest req) throws CommunityNotFound {
+        try {
+            PaginationResponse<PostResponse> postsResponses = postService.getCommunityPosts(page, limit, communityId, req);
 
-        if (existingCommunity.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого сообщества не существует"));
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(postsResponses));
+        } catch (CommunityNotFound e) {
+            throw new CommunityNotFound();
         }
-
-        Community community = existingCommunity.get();
-
-        List<Post> posts = postService.getCommunityPosts(community);
-
-        return ResponseEntity.ok(posts);
     }
 
     @GetMapping("/{id}/likes")
-    public ResponseEntity getLikes(@PathVariable("id") long postId) {
-        Optional<Post> existingPost = postService.getById(postId);
+    public ResponseEntity<QueryResponse> getLikes(@PathVariable("id") long postId) throws PostNotFound {
+        try {
+            List<User> likes = postService.getPostLikes(postId);
 
-        if (existingPost.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого поста не существует"));
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(likes));
+        } catch (PostNotFound e) {
+            throw new PostNotFound();
         }
-
-        Post post = existingPost.get();
-
-        List<User> likes = post.getLikes();
-
-        return ResponseEntity.ok(likes);
     }
 
     @PostMapping("/{id}/like")
     @IsLogined
-    public ResponseEntity like(@PathVariable("id") long postId, HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> like(@PathVariable("id") long postId, HttpServletRequest req) throws PostNotFound {
+        try {
+            LikeResponse response = postService.like(postId, req);
 
-        Optional<Post> existingPost = postService.getById(postId);
-
-        if (existingPost.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого поста не существует"));
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(response));
+        } catch (PostNotFound e) {
+            throw new PostNotFound();
         }
-
-        Post post = existingPost.get();
-
-        List<User> likes = post.getLikes();
-
-        if (likes.contains(user)) {
-            postService.unlikePost(user, post);
-        } else {
-            postService.likePost(user, post);
-        }
-
-        return ResponseEntity.ok(likes.contains(user));
     }
 }
