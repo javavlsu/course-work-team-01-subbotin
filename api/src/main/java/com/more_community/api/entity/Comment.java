@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 @Data
 @Entity
 @Builder
@@ -18,11 +20,12 @@ public class Comment {
     @Column(updatable = false, nullable = false)
     private Long id;
     private String content;
-    @ManyToOne(optional = false)
-    @JoinColumn(nullable=false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn
     @JsonBackReference
     private Post post;
     @ManyToOne(optional = false)
-    @JoinColumn(nullable=false)
+    @JoinColumn
     private User user;
+    private Date createdAt;
 }

@@ -45,9 +45,6 @@ public class FileService {
 
     @PostConstruct
     private void init() {
-        cloudinary = new Cloudinary(ObjectUtils.asMap(
-                "cloud_name", cloud_name,
-                "api_key", api_key,
-                "api_secret", api_secret));
+        cloudinary = new Cloudinary(ObjectUtils.asMap("cloud_name", cloud_name, "api_key", api_key, "api_secret", api_secret));
     }
 }

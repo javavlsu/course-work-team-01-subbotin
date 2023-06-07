@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -23,21 +24,18 @@ public class Post {
     private Long id;
     private String title;
     private String content;
-    @ManyToMany(cascade = CascadeType.ALL)
-    @JoinTable(
-            name = "post_likes",
-            joinColumns = { @JoinColumn(name = "post_id") },
-            inverseJoinColumns = { @JoinColumn(name = "user_id") }
-    )
+    @ManyToMany
+    @JoinTable(name = "post_likes", joinColumns = {@JoinColumn(name = "post_id")}, inverseJoinColumns = {@JoinColumn(name = "user_id")})
     @JsonBackReference
     private List<User> likes;
     @ManyToOne(optional = false)
-    @JoinColumn(nullable=false)
+    @JoinColumn
     @JsonBackReference
     private Community community;
-    @OneToMany(mappedBy="post", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JsonBackReference
     private Set<Comment> comments = new HashSet<>();
     @ElementCollection
     private Set<String> attachments;
+    private Date createdAt;
 }

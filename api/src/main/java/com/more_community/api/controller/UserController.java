@@ -1,22 +1,25 @@
 package com.more_community.api.controller;
 
 import com.more_community.api.annotation.IsLogined;
+import com.more_community.api.dto.request.QueryResponse;
+import com.more_community.api.dto.request.UpdateUserRequest;
+import com.more_community.api.dto.response.CommunityResponse;
+import com.more_community.api.dto.response.PostResponse;
+import com.more_community.api.dto.response.VacancyResponse;
 import com.more_community.api.entity.Comment;
-import com.more_community.api.entity.Community;
-import com.more_community.api.entity.Post;
 import com.more_community.api.entity.User;
+import com.more_community.api.exceptions.NullUser;
+import com.more_community.api.exceptions.UserNotFound;
 import com.more_community.api.security.jwt.JwtAuthenticationException;
-import com.more_community.api.security.jwt.JwtTokenProvider;
-import com.more_community.api.service.CommentService;
-import com.more_community.api.service.CommunityService;
-import com.more_community.api.service.PostService;
-import com.more_community.api.service.UserService;
+import com.more_community.api.service.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.*;
 
 @RestController
 @RequestMapping(value = "/user")
@@ -34,45 +37,82 @@ public class UserController {
     private CommentService commentService;
 
     @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    private VacancyService vacancyService;
+
+    @GetMapping
+    public ResponseEntity<QueryResponse> get(HttpServletRequest req) throws UserNotFound, NullUser, JwtAuthenticationException {
+        try {
+            User user = userService.getFromToken(req);
+
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(user));
+        } catch (UserNotFound e) {
+            throw new UserNotFound();
+        } catch (NullUser e) {
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()));
+        }
+    }
+
+    @PutMapping
+    @IsLogined
+    public ResponseEntity<QueryResponse> update(@Valid @RequestBody UpdateUserRequest request, HttpServletRequest req) throws UserNotFound {
+        try {
+            User user = userService.update(request, req);
+
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.CREATED.value()).withData(user));
+        } catch (UserNotFound e) {
+            throw new UserNotFound();
+        }
+    }
+
+    @DeleteMapping
+    @IsLogined
+    public ResponseEntity<QueryResponse> delete(HttpServletRequest req) throws UserNotFound {
+        try {
+            userService.delete(req);
+
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(true));
+        } catch (UserNotFound e) {
+            throw new UserNotFound();
+        }
+    }
 
     @GetMapping("/followed-communities")
     @IsLogined
-    public ResponseEntity getFollowedCommunities(HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> getFollowedCommunities(HttpServletRequest req) throws UserNotFound {
+        List<CommunityResponse> communitiesResponse = communityService.getUserFollowedCommunities(req);
 
-        List<Community> communities = communityService.getFollowedCommunities(user.getId());
-
-        return ResponseEntity.ok(communities);
+        return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(communitiesResponse));
     }
 
     @GetMapping("/my-communities")
     @IsLogined
-    public ResponseEntity getMyCommunities(HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> getMyCommunities(HttpServletRequest req) {
+        List<CommunityResponse> communitiesResponse = communityService.getOwnerCommunities(req);
 
-        List<Community> communities = communityService.getOwnerCommunities(user);
-
-        return ResponseEntity.ok(communities);
+        return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(communitiesResponse));
     }
 
     @GetMapping("/my-likes")
     @IsLogined
-    public ResponseEntity getMyLikes(HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> getMyLikes(HttpServletRequest req) {
+        List<PostResponse> postsResponse = postService.getUserLikedPosts(req);
 
-        List<Post> posts = postService.getLikedPosts(user.getId());
-
-        return ResponseEntity.ok(posts);
+        return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(postsResponse));
     }
 
     @GetMapping("/my-comments")
     @IsLogined
-    public ResponseEntity getMyComments(HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> getMyComments(HttpServletRequest req) {
+        List<Comment> comments = commentService.getUserComments(req);
 
-        List<Comment> comments = commentService.getUserComments(user);
+        return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(comments));
+    }
 
-        return ResponseEntity.ok(comments);
+    @GetMapping("/my-vacancies-responses")
+    @IsLogined
+    public ResponseEntity<QueryResponse> getMyVacanciesResponses(HttpServletRequest req) {
+        List<VacancyResponse> vacanciesResponse = vacancyService.getUserResponses(req);
+
+        return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(vacanciesResponse));
     }
 }

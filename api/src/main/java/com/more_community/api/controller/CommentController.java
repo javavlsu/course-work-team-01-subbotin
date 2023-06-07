@@ -1,14 +1,13 @@
 package com.more_community.api.controller;
 
 import com.more_community.api.annotation.IsLogined;
-import com.more_community.api.dto.*;
+import com.more_community.api.dto.request.QueryResponse;
+import com.more_community.api.dto.request.SaveCommentRequest;
 import com.more_community.api.entity.Comment;
-import com.more_community.api.entity.Post;
-import com.more_community.api.entity.User;
-import com.more_community.api.security.jwt.JwtAuthenticationException;
-import com.more_community.api.security.jwt.JwtTokenProvider;
+import com.more_community.api.exceptions.CommentNotFound;
+import com.more_community.api.exceptions.NoIsOwnerComment;
+import com.more_community.api.exceptions.PostNotFound;
 import com.more_community.api.service.CommentService;
-import com.more_community.api.service.PostService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,10 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 @RestController
 @RequestMapping(value = "/comments")
@@ -27,116 +23,74 @@ public class CommentController {
     @Autowired
     private CommentService commentService;
 
-    @Autowired
-    private PostService postService;
-
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
-
     @GetMapping
-    public ResponseEntity getAll() {
+    public ResponseEntity<QueryResponse> getAll() {
         List<Comment> comments = commentService.getAll();
 
-        return ResponseEntity.ok(comments);
+        return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(comments));
     }
 
     @PostMapping
     @IsLogined
-    public ResponseEntity create(@Valid @RequestBody SaveCommentRequest request, HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> create(@Valid @RequestBody SaveCommentRequest request, HttpServletRequest req) throws PostNotFound {
+        try {
+            Comment comment = commentService.save(request, req);
 
-        Optional<Post> existingPost = postService.getById(request.getPostId());
-
-        if (existingPost.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого поста не существует"));
+            return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(comment));
+        } catch (PostNotFound e) {
+            throw new PostNotFound();
         }
-
-        Comment model = Comment.builder().content(request.getContent()).post(existingPost.get()).user(user).build();
-
-        commentService.save(model);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(model));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity getById(@PathVariable("id") long commentId) {
-        Optional<Comment> existingComment = commentService.getById(commentId);
+    public ResponseEntity<QueryResponse> getById(@PathVariable("id") long commentId) throws CommentNotFound {
+        try {
+            Comment comment = commentService.getById(commentId);
 
-        if (existingComment.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого комментария не существует"));
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(comment));
+        } catch (CommentNotFound e) {
+            throw new CommentNotFound();
         }
-
-        return ResponseEntity.ok(existingComment.get());
     }
 
     @PutMapping("/{id}")
     @IsLogined
-    public ResponseEntity update(@Valid @RequestBody UpdateCommentRequest request, @PathVariable("id") long commentId, HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> update(@Valid @RequestBody SaveCommentRequest request, @PathVariable("id") long commentId, HttpServletRequest req) throws CommentNotFound, PostNotFound, NoIsOwnerComment {
+        try {
+            Comment comment = commentService.update(commentId, request, req);
 
-        Optional<Comment> existingComment = commentService.getById(commentId);
-
-        if (existingComment.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого комментария не существует"));
+            return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(comment));
+        } catch (CommentNotFound e) {
+            throw new CommentNotFound();
+        } catch (PostNotFound e) {
+            throw new PostNotFound();
+        } catch (NoIsOwnerComment e) {
+            throw new NoIsOwnerComment();
         }
-
-        Comment comment = existingComment.get();
-
-        Optional<Post> existingPost = postService.getById(request.getPostId());
-
-        if (existingPost.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого поста не существует"));
-        }
-
-        if (comment.getId() != commentId) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого поста не существует"));
-        }
-
-        if (!Objects.equals(comment.getUser(), user)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new QueryResponse(HttpStatus.FORBIDDEN.value()).withMessage("Нет доступа"));
-        }
-
-        Comment model = Comment.builder().id(comment.getId()).content(request.getContent()).post(existingPost.get()).user(user).build();
-
-        commentService.save(model);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(new QueryResponse(HttpStatus.OK.value()).withData(model));
     }
 
     @DeleteMapping("/{id}")
     @IsLogined
-    public ResponseEntity delete(@PathVariable("id") long commentId, HttpServletRequest req) throws JwtAuthenticationException {
-        User user = jwtTokenProvider.getUser(req);
+    public ResponseEntity<QueryResponse> delete(@PathVariable("id") long commentId, HttpServletRequest req) throws CommentNotFound, NoIsOwnerComment {
+        try {
+            commentService.delete(commentId, req);
 
-        Optional<Comment> existingComment = commentService.getById(commentId);
-
-        if (existingComment.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого комментария не существует"));
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(true));
+        } catch (CommentNotFound e) {
+            throw new CommentNotFound();
+        } catch (NoIsOwnerComment e) {
+            throw new NoIsOwnerComment();
         }
-
-        Comment comment = existingComment.get();
-
-        if (!Objects.equals(comment.getUser(), user)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new QueryResponse(HttpStatus.FORBIDDEN.value()).withMessage("Нет доступа"));
-        }
-
-        commentService.delete(commentId);
-
-        return ResponseEntity.ok(true);
     }
 
     @GetMapping("/post/{id}")
-    public ResponseEntity getCommunityPosts(@PathVariable("id") long postId) {
-        Optional<Post> existingPost = postService.getById(postId);
+    public ResponseEntity<QueryResponse> getPostComments(@PathVariable("id") long postId) throws PostNotFound {
+        try {
+            List<Comment> comments = commentService.getPostComments(postId);
 
-        if (existingPost.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QueryResponse(HttpStatus.NOT_FOUND.value()).withMessage("Такого поста не существует"));
+            return ResponseEntity.ok(new QueryResponse(HttpStatus.OK.value()).withData(comments));
+        } catch (PostNotFound e) {
+            throw new PostNotFound();
         }
-
-        Post post = existingPost.get();
-
-        Set<Comment> comments = post.getComments();
-
-        return ResponseEntity.ok(comments);
     }
 }

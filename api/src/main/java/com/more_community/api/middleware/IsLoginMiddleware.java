@@ -3,7 +3,7 @@ package com.more_community.api.middleware;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.more_community.api.annotation.IsLogined;
-import com.more_community.api.dto.QueryResponse;
+import com.more_community.api.dto.request.QueryResponse;
 import com.more_community.api.security.jwt.JwtTokenProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,7 +28,7 @@ public class IsLoginMiddleware implements HandlerInterceptor {
                 return true;
             }
 
-            if (!jwtTokenProvider.validateToken(request)) {
+            if (jwtTokenProvider.resolveToken(request) == null || !jwtTokenProvider.validateToken(request)) {
                 response.setContentType("application/json");
                 response.setCharacterEncoding("UTF-8");
                 response.setStatus(HttpStatus.FORBIDDEN.value());

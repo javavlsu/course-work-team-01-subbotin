@@ -13,7 +13,6 @@ import java.util.Collection;
 @Data
 @AllArgsConstructor
 public class JwtUser implements UserDetails {
-
     @Getter
     @Setter
     private final Long id;

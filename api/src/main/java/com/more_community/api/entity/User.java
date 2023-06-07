@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.List;
@@ -30,10 +31,11 @@ public class User {
     @ManyToMany(mappedBy = "followers")
     @JsonBackReference
     private List<Community> followedCommunities;
-    @OneToMany(mappedBy="owner", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "owner", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JsonBackReference
     private Set<Community> myCommunities = new HashSet<>();
-    @OneToMany(mappedBy="user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JsonBackReference
     private Set<Comment> myComments = new HashSet<>();
+    private Date createdAt;
 }
